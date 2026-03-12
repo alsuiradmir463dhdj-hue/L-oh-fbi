@@ -1,28 +1,24 @@
 import os
-import sys
-import time
 from telethon import TelegramClient, events
 
-# ========== КОНФИГУРАЦИЯ ==========
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
-API_ID = int(os.environ.get('API_ID'))
-API_HASH = os.environ.get('API_HASH')
+print("✅ СТАРТ")
 
-print("🚀 Запуск простого бота...")
-print(f"Токен: {BOT_TOKEN[:10]}...")
+# Данные
+token = os.environ.get('BOT_TOKEN')
+api_id = int(os.environ.get('API_ID'))
+api_hash = os.environ.get('API_HASH')
 
-# СОЗДАЕМ КЛИЕНТА
-bot = TelegramClient('simple', API_ID, API_HASH)
+print("✅ Токен есть")
 
-# ПРОСТОЙ ОБРАБОТЧИК
-@bot.on(events.NewMessage(pattern='/start'))
-async def start(event):
-    await event.reply("✅ Бот работает! (упрощенная версия)")
+# Клиент
+bot = TelegramClient('s', api_id, api_hash)
 
-# ЗАПУСК
-print("🔄 Подключение...")
-bot.start(bot_token=BOT_TOKEN)
-print("✅ Бот запущен!")
+@bot.on(events.NewMessage)
+async def hello(e):
+    if e.message.text == "/start":
+        await e.reply("✅ Живой!")
 
-# ДЕРЖИМ ОТКРЫТЫМ
+print("✅ Запуск...")
+bot.start(bot_token=token)
+print("✅ Бот работает")
 bot.run_until_disconnected()
