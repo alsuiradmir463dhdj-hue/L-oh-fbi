@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # ========== КОНФИГУРАЦИЯ ==========
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
-API_ID = int(os.environ.get('API_ID', 35494524))
+API_ID = int(os.environ.get('API_ID'))
 API_HASH = os.environ.get('API_HASH', '0e465149f428a082cc47a7c7d016c179')
 ACCESS_CODE = "8532"
 AUTHORIZED_USERS = []
