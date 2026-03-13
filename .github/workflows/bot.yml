@@ -1,4 +1,4 @@
-name: Telegram Bot with Mini App
+name: Full Monitor Bot
 
 on:
   workflow_dispatch:
