@@ -1,4 +1,4 @@
-name: Monitor Bot
+name: Full Monitor Bot
 
 on:
   workflow_dispatch:
