@@ -1,4 +1,4 @@
-name: Bot with PIN 5482
+name: Bot with Session Login
 
 on:
   workflow_dispatch:
