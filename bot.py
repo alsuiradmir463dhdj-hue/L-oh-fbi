@@ -84,6 +84,9 @@ async def callback_handler(event):
     user_id = event.sender_id
     data = event.data.decode()
     
+    # Используем глобальные переменные
+    global target_id, user_client
+    
     # Проверяем пин-код
     if user_id not in authorized_users:
         await event.answer("❌ Сначала введи пин-код", alert=True)
@@ -118,7 +121,6 @@ async def callback_handler(event):
         
     elif data == "reset_all":
         # Сброс всех настроек
-        global target_id, user_client
         target_id = None
         user_client = None
         user_state[user_id] = {'step': 'waiting_target'}
@@ -138,10 +140,11 @@ async def callback_handler(event):
 
 @bot.on(events.NewMessage)
 async def handler(event):
-    global user_client, target_id
-    
     user_id = event.sender_id
     text = event.message.text.strip()
+    
+    # Используем глобальные переменные
+    global target_id, user_client
 
     # === ПИН-КОД ===
     if user_id not in authorized_users:
@@ -303,9 +306,10 @@ async def handler(event):
 # === ОБРАБОТКА ФАЙЛОВ ===
 @bot.on(events.NewMessage)
 async def file_handler(event):
-    global user_client, target_id
-    
     user_id = event.sender_id
+    
+    # Используем глобальные переменные
+    global target_id, user_client
     
     if user_id not in authorized_users:
         return
