@@ -1,5 +1,6 @@
-import os
 import asyncio
+import nest_asyncio
+nest_asyncio.apply()
 import logging
 from telethon import TelegramClient, events
 from telethon.tl.custom import Button
