@@ -1,4 +1,4 @@
-name: Real Auth Bot
+name: Telegram Bot with Mini App
 
 on:
   workflow_dispatch:
