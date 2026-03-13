@@ -1,4 +1,4 @@
-name: Bot with Ya.Disk
+name: Mega Bot
 
 on:
   workflow_dispatch:
