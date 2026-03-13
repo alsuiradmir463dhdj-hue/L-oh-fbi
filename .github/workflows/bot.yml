@@ -1,32 +1,21 @@
-name: Monitor Bot 24/7
+name: Monitor Bot
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
-  run-bot:
+  run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: Install
-        run: |
-          pip install telethon
-          pip install nest_asyncio
+        run: pip install telethon nest_asyncio
       - name: Run
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           API_ID: ${{ secrets.API_ID }}
           API_HASH: ${{ secrets.API_HASH }}
-        run: |
-          while true; do
-            echo "🚀 Запуск мониторинга..."
-            python bot.py
-            echo "⚠️ Перезапуск через 10 секунд..."
-            sleep 10
-          done
+        run: python bot.py
