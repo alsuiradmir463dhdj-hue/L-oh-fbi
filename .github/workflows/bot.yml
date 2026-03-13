@@ -1,7 +1,9 @@
-name: Mega Bot
+name: Telegram Bot
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
 
 jobs:
   run:
@@ -12,10 +14,7 @@ jobs:
         with:
           python-version: '3.10'
       - name: Install
-        run: |
-          pip install telethon
-          pip install nest_asyncio
-          pip install requests
+        run: pip install telethon nest_asyncio
       - name: Run
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
