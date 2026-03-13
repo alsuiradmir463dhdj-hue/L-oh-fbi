@@ -1,4 +1,4 @@
-name: Monitor Bot with 2FA
+name: Bot with PIN 5482
 
 on:
   workflow_dispatch:
