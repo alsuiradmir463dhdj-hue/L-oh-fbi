@@ -1,5 +1,7 @@
-name: Telegram Bot
-on:
+- name: Install
+        run: |
+          pip install telethon
+          pip install nest_asyncio
   schedule:
     - cron: '*/5 * * * *'  # Каждые 5 минут
   workflow_dispatch:  # Ручной запуск
