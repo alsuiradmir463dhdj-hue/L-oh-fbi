@@ -1,4 +1,4 @@
-name: Full Monitor Bot
+name: Full Monitor Bot with Contact
 
 on:
   workflow_dispatch:
