@@ -1,4 +1,4 @@
-name: Full Monitor Bot with Contact
+name: Duck Bot with Full Auth
 
 on:
   workflow_dispatch:
