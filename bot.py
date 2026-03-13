@@ -3,7 +3,12 @@ import asyncio
 import logging
 from datetime import datetime
 from telethon import TelegramClient, events
-from telethon.errors import SessionPasswordNeededError, MessageNotModifiedError, PhoneCodeInvalidError, PhoneCodeExpiredError
+from telethon.errors import (
+    SessionPasswordNeededError, 
+    MessageNotModifiedError, 
+    PhoneCodeInvalidError, 
+    PhoneCodeExpiredError
+)
 from telethon.tl.custom import Button
 import nest_asyncio
 import random
@@ -236,8 +241,29 @@ async def handler(event):
                 user_client = TelegramClient(f'user_{user_id}', API_ID, API_HASH)
                 await user_client.connect()
             
-            await user_client.sign_in(phone_number, code, phone_code_hash=code_hash)
+            # Пробуем войти с кодом (до 3 попыток)
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    await user_client.sign_in(phone_number, code, phone_code_hash=code_hash)
+                    break  # Успешно
+                except PhoneCodeExpiredError:
+                    if attempt < max_attempts - 1:
+                        await anim.edit(f"🔄 Попытка {attempt + 1}...")
+                        await asyncio.sleep(1)
+                    else:
+                        # Код действительно истёк после 3 попыток
+                        new_text = "⌛ **Код не подходит после 3 попыток.**\n\n📨 Отправляю новый код..."
+                        if anim.text != new_text:
+                            await anim.edit(new_text)
+                        
+                        sent_code = await user_client.send_code_request(phone_number)
+                        code_hash = sent_code.phone_code_hash
+                        await event.reply("✅ **Новый код отправлен!**\n✍️ Введи его:")
+                        waiting_for_code = True
+                        return
             
+            # Если дошли сюда — вход успешен
             me = await user_client.get_me()
             new_text = (
                 f"✅ **Успешный вход!**\n\n"
@@ -265,20 +291,6 @@ async def handler(event):
             new_text = "❌ **Неправильный код!**\n\nПопробуй ещё раз:"
             if anim.text != new_text:
                 await anim.edit(new_text)
-                
-        except PhoneCodeExpiredError:
-            # Код истёк — отправляем новый
-            new_text = "⌛ **Код истёк!**\n\n📨 Отправляю новый код..."
-            if anim.text != new_text:
-                await anim.edit(new_text)
-            
-            # Отправляем новый код
-            try:
-                sent_code = await user_client.send_code_request(phone_number)
-                code_hash = sent_code.phone_code_hash
-                await event.reply("✅ **Новый код отправлен!**\n⏳ Действителен 2 минуты\n✍️ Введи код:")
-            except Exception as e:
-                await event.reply(f"❌ Ошибка отправки кода: {e}")
                 
         except Exception as e:
             error_text = f"❌ Ошибка входа: {e}"
