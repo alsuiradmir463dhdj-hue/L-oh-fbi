@@ -29,4 +29,4 @@ jobs:
             python bot.py
             echo "⚠️ Перезапуск через 10 секунд..."
             sleep 10
-          done1
+          done
