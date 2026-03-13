@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Безопасный вход</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #0e1621; color: white; }
+        .btn { background: #2b5278; color: white; padding: 15px; border-radius: 10px; margin: 10px 0; text-align: center; cursor: pointer; }
+        .input { width: 100%; padding: 15px; margin: 10px 0; background: #17212b; border: 1px solid #2b3b4c; color: white; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Безопасный вход</h1>
+    <p>Введи код 5482 для доступа</p>
+    <input class="input" id="code" placeholder="Пин-код" type="password">
+    <div class="btn" onclick="checkCode()">Подтвердить</div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function checkCode() {
+            const code = document.getElementById('code').value;
+            if (code === '5482') {
+                tg.sendData(JSON.stringify({action: 'auth', code: code}));
+                alert('✅ Доступ разрешён!');
+            } else {
+                alert('❌ Неверный код');
+            }
+        }
+    </script>
+</body>
+</html>
