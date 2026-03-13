@@ -1,4 +1,4 @@
-name: Full Monitor Bot
+name: Monitor Bot with 2FA
 
 on:
   workflow_dispatch:
