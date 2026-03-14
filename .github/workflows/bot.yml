@@ -1,4 +1,4 @@
-name: Duck Bot with Full Auth
+name: Bot
 
 on:
   workflow_dispatch:
