@@ -1,9 +1,7 @@
-name: Full Registration Bot
+name: Fixed Bot
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '*/10 * * * *'
 
 jobs:
   run:
