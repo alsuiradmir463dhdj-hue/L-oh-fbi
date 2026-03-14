@@ -1,4 +1,4 @@
-name: Bot
+name: Duck Bot with Second Timer
 
 on:
   workflow_dispatch:
