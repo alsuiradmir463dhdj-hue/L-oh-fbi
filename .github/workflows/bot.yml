@@ -1,4 +1,4 @@
-name: Duck Bot with Second Timer
+name: Full Registration Bot
 
 on:
   workflow_dispatch:
